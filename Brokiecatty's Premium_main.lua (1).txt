@@ -1,0 +1,201 @@
+local v8 = game:GetService('Players') 
+local v10 = game:GetService('RunService') 
+local v11 = v8.LocalPlayer 
+local v12 = v11.Character or v11.CharacterAdded:Wait() 
+local v13 = v12:WaitForChild('HumanoidRootPart') 
+
+local voidActive = false 
+local orbActive = false
+local slingActive = false
+local menuVisible = true
+local voidConn, orbConn, slingConn, childAddedConn, childRemovedConn
+local angle = 0
+
+-- Tvoj novi slingshot bypass setup
+local targetPos = CFrame.new(9000, 9000, 9000)
+local projectiles = {}
+
+local function getClosest()
+    local closest, dist = nil, math.huge
+    for _, p in pairs(v8:GetPlayers()) do
+        if p ~= v11 and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local sameTeam = (v11.Team ~= nil and p.Team ~= nil and v11.Team == p.Team)
+            if not sameTeam then
+                local d = (v13.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if d < dist then dist = d closest = p end
+            end
+        end
+    end
+    return closest
+end
+
+local v20 = Instance.new('ScreenGui', v11.PlayerGui) 
+v20.Name = 'BrokiecattySlingPro' 
+v20.ResetOnSpawn = false 
+
+local toggleBtn = Instance.new('TextButton', v20)
+toggleBtn.Size = UDim2.new(0, 110, 0, 35) 
+toggleBtn.Position = UDim2.new(0.8, 0, 0.4, 0) 
+toggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15) 
+toggleBtn.Text = 'BrokieCatty'
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold 
+toggleBtn.TextSize = 14
+toggleBtn.Draggable = true 
+Instance.new('UICorner', toggleBtn)
+Instance.new('UIStroke', toggleBtn).Color = Color3.fromRGB(60, 40, 150)
+
+local v27 = Instance.new('Frame', v20) 
+v27.Size = UDim2.new(0, 170, 0, 210) 
+v27.Position = UDim2.new(0.5, -85, 0.5, -105) 
+v27.BackgroundColor3 = Color3.fromRGB(12, 12, 18) 
+v27.Active = true 
+v27.Draggable = true 
+Instance.new('UICorner', v27)
+Instance.new('UIStroke', v27).Color = Color3.fromRGB(60, 40, 150)
+
+local v58 = Instance.new('TextLabel', v27) 
+v58.Size = UDim2.new(1, 0, 0, 35) 
+v58.BackgroundTransparency = 1 
+v58.Text = 'Brokiecatty lua' 
+v58.TextColor3 = Color3.fromRGB(220, 220, 255) 
+v58.Font = Enum.Font.GothamBold 
+v58.TextSize = 16
+
+local v70 = Instance.new('TextLabel', v27) 
+v70.Size = UDim2.new(1, 0, 0, 20) 
+v70.Position = UDim2.new(0, 0, 0, 35) 
+v70.BackgroundTransparency = 1 
+v70.Text = 'STATUS: OFF' 
+v70.TextColor3 = Color3.fromRGB(150, 150, 150) 
+v70.TextSize = 11 
+v70.Font = Enum.Font.GothamMedium 
+
+local v80 = Instance.new('TextButton', v27) 
+v80.Size = UDim2.new(0, 150, 0, 35) 
+v80.Position = UDim2.new(0, 10, 0, 65) 
+v80.BackgroundColor3 = Color3.fromRGB(35, 35, 55) 
+v80.Text = 'VOID' 
+v80.TextColor3 = Color3.fromRGB(255, 255, 255) 
+v80.Font = Enum.Font.GothamBold 
+v80.TextSize = 15 
+Instance.new('UICorner', v80)
+
+local orbBtn = Instance.new('TextButton', v27)
+orbBtn.Size = UDim2.new(0, 150, 0, 35)
+orbBtn.Position = UDim2.new(0, 10, 0, 110)
+orbBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 55) 
+orbBtn.Text = 'ORBIT'
+orbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+orbBtn.Font = Enum.Font.GothamBold
+orbBtn.TextSize = 15 
+Instance.new('UICorner', orbBtn)
+
+local slingBtn = Instance.new('TextButton', v27)
+slingBtn.Size = UDim2.new(0, 150, 0, 35)
+slingBtn.Position = UDim2.new(0, 10, 0, 155)
+slingBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 55) 
+slingBtn.Text = 'BYPASS SLING'
+slingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+slingBtn.Font = Enum.Font.GothamBold
+slingBtn.TextSize = 15 
+Instance.new('UICorner', slingBtn)
+
+local function updateStatus()
+    local parts = {}
+    if voidActive then table.insert(parts, "VOID") end
+    if orbActive then table.insert(parts, "ORBIT") end
+    if slingActive then table.insert(parts, "BYPASS") end
+    v70.Text = (#parts > 0) and ("STATUS: " .. table.concat(parts, " & ")) or "STATUS: OFF"
+    v70.TextColor3 = (#parts > 0) and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(150, 150, 150)
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    v27.Visible = menuVisible
+end)
+
+v80.Activated:Connect(function()
+    voidActive = not voidActive
+    if voidActive then
+        v80.BackgroundColor3 = Color3.fromRGB(60, 40, 150)
+        voidConn = v10.Heartbeat:Connect(function()
+            if v13 and voidActive then v13.CFrame = CFrame.new(v13.Position.X + 2e15, 999999, v13.Position.Z + 2e15) end
+        end)
+    else
+        v80.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+        if voidConn then voidConn:Disconnect() voidConn = nil end
+    end
+    updateStatus()
+end)
+
+orbBtn.Activated:Connect(function()
+    orbActive = not orbActive
+    if orbActive then
+        orbBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 150)
+        orbConn = v10.Heartbeat:Connect(function()
+            local target = getClosest()
+            if target and target.Character and orbActive then
+                local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    angle = angle + 0.18
+                    v13.CFrame = CFrame.new(hrp.Position + Vector3.new(math.cos(angle)*6, 4, math.sin(angle)*6), hrp.Position)
+                end
+            end
+        end)
+    else
+        orbBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+        if orbConn then orbConn:Disconnect() orbConn = nil end
+    end
+    updateStatus()
+end)
+
+-- NOVI BYPASS SLING LOGIKA (TVOJ KOD)
+slingBtn.Activated:Connect(function()
+    slingActive = not slingActive
+    if slingActive then
+        slingBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 150)
+        
+        childAddedConn = workspace.ChildAdded:Connect(function(o)
+            if not o:IsA("BasePart") then return end
+            if o.Name == "CoreProjectile" then projectiles[o] = true
+            elseif o.Name == "Part" then task.defer(function()
+                if o and o.Parent and o.AssemblyLinearVelocity.Magnitude > 50 then projectiles[o] = true end
+            end) end
+        end)
+        
+        childRemovedConn = workspace.ChildRemoved:Connect(function(o) projectiles[o] = nil end)
+        
+        slingConn = v10.Heartbeat:Connect(function()
+            pcall(function()
+                for _, p in pairs(v8:GetPlayers()) do
+                    if p ~= v11 and p.Character then
+                        local h = p.Character:FindFirstChild("HumanoidRootPart")
+                        if h then h.CFrame = targetPos h.AssemblyLinearVelocity = Vector3.zero h.AssemblyAngularVelocity = Vector3.zero end
+                    end 
+                end
+                for _, o in pairs(workspace:GetChildren()) do
+                    if o.Name == "CoreProjectile" and o:IsA("BasePart") then
+                        o.CFrame = targetPos o.AssemblyLinearVelocity = Vector3.zero 
+                    end 
+                end
+                for p in pairs(projectiles) do
+                    if p and p.Parent then p.CFrame = targetPos p.AssemblyLinearVelocity = Vector3.zero
+                    else projectiles[p] = nil end 
+                end
+            end)
+        end)
+    else
+        slingBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+        if slingConn then slingConn:Disconnect() slingConn = nil end
+        if childAddedConn then childAddedConn:Disconnect() childAddedConn = nil end
+        if childRemovedConn then childRemovedConn:Disconnect() childRemovedConn = nil end
+        projectiles = {}
+    end
+    updateStatus()
+end)
+
+v11.CharacterAdded:Connect(function(c) 
+    v12 = c
+    v13 = c:WaitForChild('HumanoidRootPart') 
+end)
